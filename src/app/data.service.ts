@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {merge, Observable, Subject} from "rxjs";
@@ -41,15 +42,49 @@ class CacheState<T> {
   }
 }
 
+function CacheStateDecorator() {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    const originalFunc = descriptor.value;
+
+    descriptor.value = function(this, args: any) {
+      this.reload$ = new Subject<void>();
+      this.reloads$ = this.reload$.pipe(mergeMap(() => this.getDataOneTime()));
+
+      this.data = (): Observable<User> => {
+        if (!this.cache$) {
+          const result = originalFunc.apply(this, args);
+          return result.pipe(takeUntil(this.reload$), shareReplay(this.cacheSize));
+        }
+
+        return this.cache$;
+      };
+
+      this.getDataOneTime = (): Observable<User> => {
+        return this.data().pipe(take(1));
+      };
+
+      this.data$ = merge(this.getDataOneTime(), this.reloads$);
+
+      this.reload = (): void => {
+        this.reload$.next();
+        this.cache$ = null;
+      }
+    }
+  };
+}
+
+
 @Injectable({providedIn: 'root'})
 export class DataService {
   private readonly apiUrl = 'https://randomuser.me/api/';
-  public data!: CacheState<User>;
+  public data$!: Observable<User>;
+  public reload!: () => void;
 
   constructor(private httpClient: HttpClient) {
-    this.data = new CacheState<User>(this.getDataFromServer.bind(this));
+    this.getDataFromServer();
   }
 
+  @CacheStateDecorator()
   private getDataFromServer(): Observable<User> {
     return this.httpClient.get<Response>(this.apiUrl).pipe(map((data: Response) => data?.results[0]));
   }

@@ -17,12 +17,12 @@ import {DataService} from "./data.service";
 })
 
 export class DataComponent implements OnDestroy {
-  public data$ = this.dataService.data.getData();
+  public data$ = this.dataService.data$;
   constructor(private dataService: DataService) {}
 
   ngOnDestroy() {}
 
   public reloadData(): void {
-    this.dataService.data.reload();
+    this.dataService.reload()
   }
 }
