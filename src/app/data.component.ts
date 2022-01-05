@@ -16,11 +16,15 @@ import {DataService} from "./data.service";
   `
 })
 
-export class DataComponent implements OnDestroy {
-  public data$ = this.dataService.data$;
+export class DataComponent implements OnInit {
+  public data$ = this.dataService.getDataFromServer();
   constructor(private dataService: DataService) {}
 
-  ngOnDestroy() {}
+
+  ngOnInit() {
+    console.dir(this.dataService.getDataFromServer)
+    console.dir(this.dataService)
+  }
 
   public reloadData(): void {
     this.dataService.reload()
