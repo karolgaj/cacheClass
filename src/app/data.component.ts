@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit} from '@angular/core';
+import {Component} from '@angular/core';
 import {DataService} from "./data.service";
 
 @Component({
@@ -16,12 +16,10 @@ import {DataService} from "./data.service";
   `
 })
 
-export class DataComponent implements OnInit {
+export class DataComponent {
   public data$ = this.dataService.randomUser();
   constructor(private dataService: DataService) {}
 
-
-  ngOnInit() {}
 
   public reloadData(): void {
     // @ts-ignore
