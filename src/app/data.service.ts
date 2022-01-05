@@ -10,8 +10,8 @@ declare global {
   }
 }
 
-
-function Cacheable(properties = {reloadable: false, bufferSize: 1 }) {
+interface CacheableParameters { reloadable: boolean, bufferSize?: number }
+function Cacheable({ reloadable = false, bufferSize = 1 }: CacheableParameters ) {
   return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalFunc = descriptor.value;
 
@@ -28,27 +28,32 @@ function Cacheable(properties = {reloadable: false, bufferSize: 1 }) {
     })
 
     descriptor.value = function(this, args: any) {
-      if (!target.data) {
-        target.data = () => {
-          if (!target.cache$) {
-            const result = originalFunc.apply(this, args);
-            target.cache$ = properties.reloadable
-              ? result.pipe(takeUntil(target.reload$), shareReplay(properties.bufferSize))
-              : result.pipe(shareReplay(properties.bufferSize));
-          }
-          return target.cache$;
-        };
+      target.data = () => {
+        if (!target.cache$) {
+          const result = originalFunc.apply(this, Array.isArray(args) ? args : [args]);
+          target.cache$ = result.pipe(takeUntil(target.reload$), shareReplay(bufferSize));
+        }
+        return target.cache$;
+      };
+
+      target.data$ = merge(target.getDataOneTime(), target.reloads$);
+
+      if (reloadable) {
+        Object.defineProperty(this, `${propertyKey}Reload`,{
+          value: () => {
+            target.cache$ = null;
+            target.reload$.next();
+          },
+          writable: true
+        })
       }
 
-      if (!target.data$) {
-        target.data$ = properties.reloadable ? merge(target.getDataOneTime(), target.reloads$) : target.getDataOneTime();
-      }
-
-      // @ts-ignore
-      this[`${propertyKey}Reload`] = (): void => {
-        target.cache$ = null;
-        target.reload$.next();
-      }
+      Object.defineProperty(this, `${propertyKey}Clear`,{
+        value: () => {
+          target.cache$ = null;
+        },
+        writable: true
+      })
 
       return target.data$
     }
@@ -59,10 +64,11 @@ function Cacheable(properties = {reloadable: false, bufferSize: 1 }) {
 export class DataService {
   private readonly apiUrl = 'https://randomuser.me/api/';
   public randomUserReload!: () => void;
+  public randomUserClear!: () => void;
 
   constructor(private httpClient: HttpClient) {}
 
-  @Cacheable({reloadable: true, bufferSize: 1})
+  @Cacheable({ reloadable: true })
   public randomUser(): Observable<User> {
     return this.httpClient.get<Response>(this.apiUrl).pipe(map((data: Response) => data?.results[0]));
   }
