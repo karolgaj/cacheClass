@@ -17,16 +17,14 @@ import {DataService} from "./data.service";
 })
 
 export class DataComponent implements OnInit {
-  public data$ = this.dataService.getDataFromServer();
+  public data$ = this.dataService.randomUser();
   constructor(private dataService: DataService) {}
 
 
-  ngOnInit() {
-    console.dir(this.dataService.getDataFromServer)
-    console.dir(this.dataService)
-  }
+  ngOnInit() {}
 
   public reloadData(): void {
-    this.dataService.reload()
+    // @ts-ignore
+    this.dataService.randomUser.reload()
   }
 }
