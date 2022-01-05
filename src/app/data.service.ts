@@ -11,7 +11,7 @@ declare global {
 }
 
 
-function CacheStateDecorator(properties = { cacheSize: 1 }) {
+function Cacheable(properties = {reloadable: false, bufferSize: 1 }) {
   return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalFunc = descriptor.value;
 
@@ -32,20 +32,16 @@ function CacheStateDecorator(properties = { cacheSize: 1 }) {
         target.data = () => {
           if (!target.cache$) {
             const result = originalFunc.apply(this, args);
-            target.cache$ = result.pipe(takeUntil(target.reload$), shareReplay(properties.cacheSize));
+            target.cache$ = properties.reloadable
+              ? result.pipe(takeUntil(target.reload$), shareReplay(properties.bufferSize))
+              : result.pipe(shareReplay(properties.bufferSize));
           }
           return target.cache$;
         };
       }
 
       if (!target.data$) {
-        target.data$ = merge(target.getDataOneTime(), target.reloads$);
-      }
-
-      // @ts-ignore
-      this[propertyKey]['reload'] = (): void => {
-        target.cache$ = null;
-        target.reload$.next();
+        target.data$ = properties.reloadable ? merge(target.getDataOneTime(), target.reloads$) : target.getDataOneTime();
       }
 
       // @ts-ignore
@@ -59,18 +55,14 @@ function CacheStateDecorator(properties = { cacheSize: 1 }) {
   };
 }
 
-interface ReloadCacheable<T extends string> {
-  // @ts-ignore
-  [key: `${T}Reload`]: () => void
-}
-
 @Injectable({ providedIn: 'root' })
-export class DataService implements ReloadCacheable<'randomUser'> {
+export class DataService {
   private readonly apiUrl = 'https://randomuser.me/api/';
+  public randomUserReload!: () => void;
 
   constructor(private httpClient: HttpClient) {}
 
-  @CacheStateDecorator()
+  @Cacheable({reloadable: true, bufferSize: 1})
   public randomUser(): Observable<User> {
     return this.httpClient.get<Response>(this.apiUrl).pipe(map((data: Response) => data?.results[0]));
   }

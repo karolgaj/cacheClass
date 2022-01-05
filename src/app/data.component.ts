@@ -22,7 +22,6 @@ export class DataComponent {
 
 
   public reloadData(): void {
-    // @ts-ignore
-    this.dataService.randomUser.reload()
+    this.dataService.randomUserReload()
   }
 }
