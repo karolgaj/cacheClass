@@ -1,5 +1,6 @@
 import {Component} from '@angular/core';
-import {DataService} from "./data.service";
+import {CacheableObservable, DataService} from "./data.service";
+import {User} from "./data.model";
 
 @Component({
   selector: 'data-component',
@@ -9,6 +10,8 @@ import {DataService} from "./data.service";
       <h2>Username: {{data.login.username}}</h2>
       <p>Phone: {{data.phone}}</p>
       <p>Gender: {{data.gender}}</p>
+
+      <button (click)="reload()">refresh</button>
     </div>
 
     <div *ngIf="data1$ | async as data">
@@ -16,15 +19,23 @@ import {DataService} from "./data.service";
       <h2>Username: {{data.login.username}}</h2>
       <p>Phone: {{data.phone}}</p>
       <p>Gender: {{data.gender}}</p>
+      <button (click)="reload1()">refresh</button>
     </div>
 
-    <button [routerLink]="'../placeholder'">go to PLACEHOLDER</button>
+    <button style="margin-top: 2rem" [routerLink]="'../placeholder'">go to PLACEHOLDER</button>
   `
 })
 
 export class DataComponent {
-  public data$ = this.dataService.randomUser();
+  public data$: CacheableObservable<User> = this.dataService.randomUser();
   public data1$ = this.dataService.randomUser1();
   constructor(private dataService: DataService) {}
 
+  public reload() {
+    this.data$.reload();
+  }
+
+  public reload1() {
+    this.data1$.reload();
+  }
 }

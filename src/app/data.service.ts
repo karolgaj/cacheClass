@@ -1,8 +1,13 @@
 import {Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
+import {HttpClient, HttpContext, HttpEvent, HttpHeaders, HttpParams} from '@angular/common/http';
 import {merge, Observable, Subject} from "rxjs";
 import {map, mergeMap, shareReplay, take, takeUntil} from "rxjs/operators";
 import {Response, User} from "./data.model";
+
+export interface CacheableObservable<T> extends Observable<T> {
+  clear: () => void;
+  reload: () => void;
+}
 
 interface CacheableParameters { reloadable: boolean, bufferSize?: number }
 function Cacheable({ reloadable = false, bufferSize = 1 }: CacheableParameters = { reloadable:false, bufferSize: 1 }) {
@@ -32,22 +37,14 @@ function Cacheable({ reloadable = false, bufferSize = 1 }: CacheableParameters =
 
       descriptor.data$ = merge(descriptor.getDataOneTime(), descriptor.reloads$);
 
-      if (reloadable) {
-        Object.defineProperty(this, `${propertyKey}Reload`,{
-          value: () => {
-            descriptor.cache$ = null;
-            descriptor.reload$.next();
-          },
-          writable: true
-        })
-      }
-
-      Object.defineProperty(this, `${propertyKey}Clear`,{
-        value: () => {
+      descriptor.data$.reload = reloadable ? () => {
           descriptor.cache$ = null;
-        },
-        writable: true
-      })
+          descriptor.reload$.next();
+      } : () => console.error('To use reload function in Cacheable decorator, set reloadable property to true in place of use of @Cacheable decorator');
+
+      descriptor.data$.clear = () => {
+        descriptor.cache$ = null;
+      };
 
       return descriptor.data$
     }
@@ -61,12 +58,12 @@ export class DataService {
   constructor(private httpClient: HttpClient) {}
 
   @Cacheable()
-  public randomUser(): Observable<User> {
-    return this.httpClient.get<Response>(this.apiUrl).pipe(map((data: Response) => data?.results[0]));
+  public randomUser() {
+    return this.httpClient.get<Response>(this.apiUrl).pipe(map((data: Response) => data?.results[0])) as CacheableObservable<User>;
   }
 
   @Cacheable({ reloadable: true })
-  public randomUser1(): Observable<User> {
-    return this.httpClient.get<Response>(this.apiUrl).pipe(map((data: Response) => data?.results[0]));
+  public randomUser1() {
+    return this.httpClient.get<Response>(this.apiUrl).pipe(map((data: Response) => data?.results[0])) as CacheableObservable<User>;
   }
 }
