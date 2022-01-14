@@ -1,5 +1,5 @@
 export interface Response {
-  results: (User)[];
+  results: User[];
   info: Info;
 }
 
@@ -24,11 +24,13 @@ export interface User {
   picture: Picture;
   nat: string;
 }
+
 export interface Name {
   title: string;
   first: string;
   last: string;
 }
+
 export interface Location {
   street: Street;
   city: string;
@@ -38,18 +40,22 @@ export interface Location {
   coordinates: Coordinates;
   timezone: Timezone;
 }
+
 export interface Street {
   number: number;
   name: string;
 }
+
 export interface Coordinates {
   latitude: string;
   longitude: string;
 }
+
 export interface Timezone {
   offset: string;
   description: string;
 }
+
 export interface Login {
   uuid: string;
   username: string;
@@ -59,14 +65,17 @@ export interface Login {
   sha1: string;
   sha256: string;
 }
+
 export interface DobOrRegistered {
   date: string;
   age: number;
 }
+
 export interface Id {
   name: string;
   value: string;
 }
+
 export interface Picture {
   large: string;
   medium: string;
